@@ -16,7 +16,7 @@ Vmap, derivatives in all directions and automatic accelerator management (no mor
 
 # Can we get the best of both worlds? Yes, we can[1].
 
-[1] Obama
+References: [1] Obama
 
 ### Tensors vs Arrays
 
@@ -28,14 +28,22 @@ Thus the dataloader/datamodules etc restricted to Numpy/Jax.Numpy operations.
 
 Secondly, we can't use PyTorch Lightning automatic optimization which makes setting up experiments in PL so convenient.
 But at the same time Jax does automatic device placement and moving tensors to the correct devices.
-Thus by simply setting the class variable `automatic_optimization=False` we gain complete control and tell PL that we'll do our optimization on our own.
+Thus by simply setting the class variable `automatic_optimization=False` we gain complete control over all gradient computations and gradient descent optimization and tell PL that we'll do our optimization on our own.
 
 Since Jax requires pure functions, all we have to do is make the forward step a `@staticmethod` without the `self` argument.
 Similarly, we can create a static gradient function in the same way.
 
-Then, we can jit-compile the entire forward and backward pass with **JAX** with a simple decorator inside the training setup of **Pytorch Lightning**.
+Question: What do we gain?
+
+Answer: We can jit-compile the entire forward and backward pass with **JAX** with a simple decorator inside the training setup of **Pytorch Lightning**.
+
 Thus PyTorch Lightning takes care of all the data set management, the logging, the tracking and the overall training loop structure with all the convenience PL is famous for, and Jax does the fast computing inside of PL.
 
 Everybody wins ...
+
+### Important Remark
+
+This is simply combining amazing pieces of work and all the credit goes out to the developers of PyTorch Lightning team, Jax team and Equinox/Treex teams.
+I'm just playing Lego with their amazing work and sticking it together!
 
 ![](now_kiss.jpeg)
