@@ -41,6 +41,11 @@ Thus PyTorch Lightning takes care of all the data set management, the logging, t
 
 Everybody wins ...
 
+### Examples
+
+There are two examples how I used PyTorch Lightning for Bayesian Neural Networks and Score Based Generative Modelling ([used code by Patrick Kidger](https://docs.kidger.site/equinox/examples/score_based_diffusion/)).
+The score based generative modelling was copied from the amazing code base of [Patrick Kidger](https://github.com/patrick-kidger) who has written wonderful packages like Equinox and diffrax as well as the used score predictor.
+
 ### Important Remark
 
 This is simply combining amazing pieces of work and all the credit goes out to the developers of PyTorch Lightning team, Jax team and Equinox/Treex teams.
