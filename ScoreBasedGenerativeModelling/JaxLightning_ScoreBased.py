@@ -165,7 +165,7 @@ class JaxLightning(pl.LightningModule):
 		t0 = 0
 		y1 = jr.normal(key, data_shape)  # noise at t1, from which integrate backwards to data distribution
 		# reverse time, solve from t1 to t0
-		sol = dfx.diffeqsolve(term=term, solver=solver, t0=t1, t1=t0, dt0=-dt0, y0=y1, adjoint=dfx.NoAdjoint())
+		sol = dfx.diffeqsolve(terms=term, solver=solver, t0=t1, t1=t0, dt0=-dt0, y0=y1, adjoint=dfx.NoAdjoint())
 		return sol.ys[0]
 	
 	@staticmethod
@@ -220,8 +220,9 @@ class JaxLightning(pl.LightningModule):
 
 
 hparams = argparse.ArgumentParser()
+logging = [0, 1, 1 if torch.cuda.is_available() else 0][-1]
 hparams = JaxLightning.args(hparams,
-                            logging=['disabled', 'online'][0, 1, 1 if torch.cuda.is_available() else 0][-1],
+                            logging=['disabled', 'online'][logging],
                             project='jax_score_based',
                             load_last_checkpoint=True,
                             show=True,

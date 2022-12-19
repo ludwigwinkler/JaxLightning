@@ -14,9 +14,16 @@ This makes the code very readable and succinct.
 The biggest advantage of Jax is probably its clean functional programming (I've come around to that) and its speed.
 Vmap, derivatives in all directions and automatic accelerator management (no more tensor.to(deviceXYZ)) is also part of the gift box.
 
+You can find a speed comparison at the deep learning course of [UvA](https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/JAX/tutorial5/Inception_ResNet_DenseNet.html).
+The take away of that PyTorch vs Jax comparison is that Jax excels at compiling forward and backward passes consisting of lots of SIMD (single instruction multiple data) instructions such as separate calls of small-ish kernel convolutions on locally independent data.
+The speed-up can be considerable at **2.5X-3.4X** but is expected to regress to PyTorchs performance to drop once the time spend on executing those calls increases relative to the function call itself.
+That means that for large batch sizes, single instructions on very large tensors will depend on the hardware and the XLA compiler can do little about that.
+
 # Can we get the best of both worlds? Yes, we can[1].
 
 References: [1] Obama
+
+You can run any Jax code and thus any Jax neural network package inside of PyTorch Lightning, be it written in Flax/Haiku/Equinox/Treex and optimized with the common optimization libraries. 
 
 ### Tensors vs Arrays
 
