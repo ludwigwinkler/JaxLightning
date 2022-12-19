@@ -9,7 +9,7 @@ Additionally, you got amazing logging, general code structure, data management v
 
 # Jax
 
-Recent packages such as Equinox and Treex are on the top very similar in structure and handling like PyTorch.
+Recent packages such as Equinox and Treex are at the top level very similar in structure and handling like PyTorch.
 This makes the code very readable and succinct.
 The biggest advantage of Jax is probably its clean functional programming (I've come around to that) and its speed.
 Vmap, derivatives in all directions and automatic accelerator management (no more tensor.to(deviceXYZ)) is also part of the gift box.
@@ -27,7 +27,7 @@ You can run any Jax code and thus any Jax neural network package inside of PyTor
 
 ### Tensors vs Arrays
 
-The main idea of combining the great and convenient code structure of PyTorch Lightning with the versatility of Jax is to restrict PyTorch LIghtning to pure Numpy/Jax.Numpy until the data 'reaches' the Jax model.
+The main idea of combining the great and convenient code structure of PyTorch Lightning with the versatility of Jax is to restrict PyTorch Lightning to pure Numpy/Jax.Numpy until the data 'reaches' the Jax model.
 Therefore we can reuse almost all DataModules and DataSets and remove the single line, where data is cast to torch.Tensors.
 Thus the dataloader/datamodules etc restricted to Numpy/Jax.Numpy operations.
 
