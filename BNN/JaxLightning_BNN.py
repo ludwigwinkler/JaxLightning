@@ -162,9 +162,9 @@ class JaxLightning(pl.LightningModule):
 	def on_fit_start(self) -> None:
 		self.num_data_samples = self.trainer.datamodule.num_samples
 		self.viz_network('On Train Start')
-		
 	
 	def training_step(self, batch):
+		''' Standard PyTorch Lightning training step ... but with Jax in it! '''
 		self.global_step_ += 1
 		data, target = jnp.array(batch[0].reshape(-1, *batch[0].shape[1:])), jnp.array(batch[1])
 		data = einops.repeat(data, '... -> b ...', b=self.MC)
@@ -172,7 +172,11 @@ class JaxLightning(pl.LightningModule):
 		
 		self.key, *subkeys = jax.random.split(self.key, num=self.MC + 1)  # creating new keys
 		subkeys = jnp.stack(subkeys)
-		
+		'''
+		Jax in the middle of a Lightning module
+		Call static gradient method from same PL module
+		Calls in turn cost function doing the jit compiled forward, backward and gradient update step
+		'''
 		loss, metrics, self.bnn, self.optim, self.opt_state = JaxLightning.make_step(self.bnn,
 		                                                                             data,
 		                                                                             target,
@@ -180,11 +184,32 @@ class JaxLightning(pl.LightningModule):
 		                                                                             subkeys,
 		                                                                             self.optim,
 		                                                                             self.opt_state)
-		dict = {'loss': torch.from_numpy(np.array(loss)), 'global_step': self.global_step, 'current_epoch': self.current_epoch
-		        # **{key: torch.from_numpy(np.array(value)).item() for key, value in metrics.items()}
-		        }
+		'''All the logging and perks you love about Lightining'''
+		dict = {'loss': loss.item(), 'global_step': self.global_step, 'current_epoch': self.current_epoch}
 		self.log_dict(dict, prog_bar=True)
 		return dict
+	
+	@staticmethod
+	@eqx.filter_value_and_grad(has_aux=True)
+	def criterion(model, x, y, num_samples, keys):
+		'''Jit-able criterion function including forward pass'''
+		model_vmap = jax.vmap(model, in_axes=(0, 0))  # takes [MC, B, F] features and [MC] keys
+		pred = model_vmap(x, keys)
+		assert pred.ndim == 3
+		std = jax.lax.stop_gradient(pred.std(axis=0))
+		mse = (y - pred.mean(axis=0)) ** 2
+		nll = -(-0.5 * mse / std ** 2).sum() * num_samples
+		kl = 1. * model.kl_div()
+		return (nll + kl, {'nll': nll, 'kl': kl, 'std': std.mean(), 'mse': mse.mean()})
+	
+	@staticmethod
+	@eqx.filter_jit
+	def make_step(model, x, y, num_samples, keys, optim, opt_state):
+		'''Jit-able gradient and parameter update'''
+		(loss, metrics), grads = JaxLightning.criterion(model, x, y, num_samples, keys)
+		updates, opt_state = optim.update(grads, opt_state)
+		model = eqx.apply_updates(model, updates)
+		return loss, metrics, model, optim, opt_state
 	
 	def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
 		'''
@@ -192,7 +217,7 @@ class JaxLightning(pl.LightningModule):
 		'''
 		if self.global_step >= self.trainer.max_steps and self.trainer.max_steps > 0:
 			self.trainer.should_stop = True
-		
+	
 	def on_train_end(self) -> None:
 		self.viz_network(title='On Fit End')
 	
@@ -221,27 +246,6 @@ class JaxLightning(pl.LightningModule):
 	def configure_optimizers(self):
 		self.optim = optax.adam(0.001)
 		self.opt_state = self.optim.init(eqx.filter(self.bnn, eqx.is_array))
-	
-	@staticmethod
-	@eqx.filter_value_and_grad(has_aux=True)
-	def criterion(model, x, y, num_samples, keys):
-		model_vmap = jax.vmap(model, in_axes=(0, 0))  # takes [MC, B, F] features and [MC] keys
-		pred = model_vmap(x, keys)
-		assert pred.ndim == 3
-		std = jax.lax.stop_gradient(pred.std(axis=0))
-		# std = 0.01
-		mse = (y - pred.mean(axis=0)) ** 2
-		nll = -(-0.5 * mse / std ** 2).sum() * num_samples
-		kl = 1. * model.kl_div()
-		return (nll + kl, {'nll': nll, 'kl': kl, 'std': std.mean(), 'mse': mse.mean()})
-	
-	@staticmethod
-	@eqx.filter_jit
-	def make_step(model, x, y, num_samples, keys, optim, opt_state):
-		(loss, metrics), grads = JaxLightning.criterion(model, x, y, num_samples, keys)
-		updates, opt_state = optim.update(grads, opt_state)
-		model = eqx.apply_updates(model, updates)
-		return loss, metrics, model, optim, opt_state
 
 
 print(jax.devices())

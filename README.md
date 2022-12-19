@@ -25,6 +25,9 @@ References: [1] Obama
 
 You can run any Jax code and thus any Jax neural network package inside of PyTorch Lightning, be it written in Flax/Haiku/Equinox/Treex and optimized with the common optimization libraries. 
 
+Enough reading ... show me the code!
+![](InANutshell.png)
+
 ### Tensors vs Arrays
 
 The main idea of combining the great and convenient code structure of PyTorch Lightning with the versatility of Jax is to restrict PyTorch LIghtning to pure Numpy/Jax.Numpy until the data 'reaches' the Jax model.
