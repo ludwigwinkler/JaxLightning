@@ -21,7 +21,7 @@ That means that for large batch sizes, single instructions on very large tensors
 
 # Can we get the best of both worlds? Yes, we can[1].
 
-References: [1] Obama
+References: [1] 44th President of the United States Barack Obama
 
 You can run any Jax code and thus any Jax neural network package inside of PyTorch Lightning, be it written in Flax/Haiku/Equinox/Treex and optimized with the common optimization libraries. 
 
