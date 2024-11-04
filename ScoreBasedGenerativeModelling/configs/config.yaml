@@ -1,0 +1,10 @@
+logging: online
+project: jax_score_based
+load_last_checkpoint: False
+show: True
+seed: 12345
+fast_dev_run: 0
+save_figs: False
+watch_model_training: False
+hparams_id: None
+experiment: mnist

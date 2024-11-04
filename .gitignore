@@ -43,6 +43,7 @@ MANIFEST
 **/data/**
 **/checkpoints/**
 **/outputs/**
+**/pcluster_logs/**
 
 # Installer logs
 pip-log.txt
