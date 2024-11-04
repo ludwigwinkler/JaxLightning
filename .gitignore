@@ -38,6 +38,12 @@ MANIFEST
 *.manifest
 *.spec
 
+**/wandb/**
+**/lightning_logs/**
+**/data/**
+**/checkpoints/**
+**/outputs/**
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
