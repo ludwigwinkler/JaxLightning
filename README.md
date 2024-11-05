@@ -69,4 +69,4 @@ Everybody wins ...
 
 There are two examples how I used PyTorch Lightning for my own Bayesian Neural Networks and Score Based Generative Modelling ([used code by Patrick Kidger](https://docs.kidger.site/equinox/examples/score_based_diffusion/)).
 
-![](now_kiss.jpeg)
+![](assets/now_kiss.jpeg)
