@@ -13,6 +13,7 @@ Recent packages such as Equinox and Treex are at the top level very similar in s
 This makes the code very readable and succinct.
 The biggest advantage of Jax is probably its clean functional programming (I've come around to that) and its speed.
 Vmap, derivatives in all directions and automatic accelerator management (no more tensor.to(deviceXYZ)) is also part of the gift box.
+Also, the explicit random keys remove an entire library of possible problems.
 
 You can find a speed comparison at the deep learning course of [UvA](https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/JAX/tutorial5/Inception_ResNet_DenseNet.html).
 The take away of that PyTorch vs Jax comparison is that Jax excels at compiling forward and backward passes consisting of lots of SIMD (single instruction multiple data) instructions such as separate calls of small-ish kernel convolutions on locally independent data.
@@ -23,10 +24,23 @@ That means that for large batch sizes, single instructions on very large tensors
 
 References: [1] 44th President of the United States Barack Obama
 
-You can run any Jax code and thus any Jax neural network package inside of PyTorch Lightning, be it written in Flax/Haiku/Equinox/Treex and optimized with the common optimization libraries. 
+You can run any Jax code and thus any Jax neural network package inside of PyTorch Lightning, be it written in Flax/Haiku/Equinox/Treex and optimized with the common optimization libraries.
 
-Enough reading ... show me the code!
-![](InANutshell.png)
+The necessary steps are:
+
+**1. Turn off via `automatic_optimization=False` ... we gotta do that stuff ourselves.**
+
+<img src="assets/automaticoptimization.png" alt="Dataloader" width="700"/>
+  
+**2. Load data strictly in 'numpy' mode by modifying the `collate_fn` in PyTorch.**
+
+<img src="assets/dataloader.png" alt="Dataloader" width="700"/>
+
+**3. Run the forward, backward and gradient update step within lightning with `@staticmethod` decorators.**
+
+<img src="assets/code.png" alt="Dataloader" width="700"/>
+
+Done. Now we got the best of Jax with the best of Lightning. :)
 
 ### Tensors vs Arrays
 
@@ -53,12 +67,6 @@ Everybody wins ...
 
 ### Examples
 
-There are two examples how I used PyTorch Lightning for Bayesian Neural Networks and Score Based Generative Modelling ([used code by Patrick Kidger](https://docs.kidger.site/equinox/examples/score_based_diffusion/)).
-The score based generative modelling was copied from the amazing code base of [Patrick Kidger](https://github.com/patrick-kidger) who has written wonderful packages like Equinox and diffrax as well as the used score predictor.
-
-### Important Remark
-
-This is simply combining amazing pieces of work and all the credit goes out to the developers of PyTorch Lightning team, Jax team and Equinox/Treex teams.
-I'm just playing Lego with their amazing work and sticking it together!
+There are two examples how I used PyTorch Lightning for my own Bayesian Neural Networks and Score Based Generative Modelling ([used code by Patrick Kidger](https://docs.kidger.site/equinox/examples/score_based_diffusion/)).
 
 ![](now_kiss.jpeg)
