@@ -10,6 +10,18 @@ import einops
 import jax, jax.numpy as jnp
 import optax, equinox as eqx
 
+"""
+Reference on how to do manual optimization in Lightning
+https://lightning.ai/docs/pytorch/stable/model/manual_optimization.html
+
+Use the following functions and call them manually:
+    - self.optimizers() to access your optimizers (one or multiple)
+    - optimizer.zero_grad() to clear the gradients from the previous training step
+    - self.manual_backward(loss) instead of loss.backward()
+    - optimizer.step() to update your model parameters
+    - self.toggle_optimizer() and self.untoggle_optimizer() if needed
+"""
+
 
 def numpy_collate(batch):
     if isinstance(batch[0], np.ndarray):
@@ -142,8 +154,8 @@ class BNN(eqx.Module):
                 eqx.nn.Lambda(jax.nn.gelu),
                 BayesLinear(hidden, hidden, key),
                 eqx.nn.Lambda(jax.nn.gelu),
-                BayesLinear(hidden, hidden, key),
-                eqx.nn.Lambda(jax.nn.gelu),
+                # BayesLinear(hidden, hidden, key),
+                # eqx.nn.Lambda(jax.nn.gelu),
                 BayesLinear(hidden, hidden, key),
                 eqx.nn.Lambda(jax.nn.gelu),
                 BayesLinear(hidden, 1, key),
@@ -183,7 +195,7 @@ class JaxLightning(pl.LightningModule):
 
     def on_fit_start(self) -> None:
         self.num_data_samples = self.trainer.datamodule.num_samples
-        self.viz_network("On Train Start")
+        # self.viz_network("On Train Start")
 
     def training_step(self, batch):
         """Standard PyTorch Lightning training step ... but with Jax in it!"""
@@ -199,20 +211,33 @@ class JaxLightning(pl.LightningModule):
             self.key, num=self.MC + 1
         )  # creating new keys
         subkeys = jnp.stack(subkeys)
+
         """
 		Jax in the middle of a Lightning module
 		Call static gradient method from same PL module
 		Calls in turn cost function doing the jit compiled forward, backward and gradient update step
 		"""
-        loss, metrics, self.bnn, self.optim, self.opt_state = JaxLightning.make_step(
-            self.bnn,
-            data,
-            target,
-            self.num_data_samples,
-            subkeys,
-            self.optim,
-            self.opt_state,
+        # loss, metrics, self.bnn, self.optim, self.opt_state = JaxLightning.make_step(
+        #     model=self.bnn,
+        #     x=data,
+        #     y=target,
+        #     num_samples=self.num_data_samples,
+        #     keys=subkeys,
+        #     optim=self.optim,
+        #     optim_state=self.opt_state,
+        # )
+
+        # TODO: split value and grad to align more with classic pytorch lightning structure
+        model_vmap = jax.vmap(
+            self.bnn, in_axes=(0, 0)
+        )  # takes [MC, B, F] features and [MC] keys
+        pred = model_vmap(data, subkeys)
+        prior_kl = 1.0 * self.bnn.kl_div()
+        loss, metrics = self._criterion(
+            pred=pred, target=target, num_samples=self.num_data_samples, kl=prior_kl
         )
+        self.manual_backward(loss)
+        self.optimizer_step()
         """All the logging and perks you love about Lightining"""
         dict = {
             "Loss": loss.item(),
@@ -236,6 +261,24 @@ class JaxLightning(pl.LightningModule):
         nll = -(-0.5 * mse / std**2).sum() * num_samples
         kl = 1.0 * model.kl_div()
         return (nll + kl, {"nll": nll, "kl": kl, "std": std.mean(), "mse": mse.mean()})
+
+    def _criterion(self, pred, target, num_samples, kl):
+        """Jit-able criterion function including forward pass"""
+
+        assert pred.ndim == 3
+        std = jax.lax.stop_gradient(pred.std(axis=0))
+        mse = (target - pred.mean(axis=0)) ** 2
+        nll = -(-0.5 * mse / std**2).sum() * num_samples
+        return (nll + kl, {"nll": nll, "kl": kl, "std": std.mean(), "mse": mse.mean()})
+
+    def manual_backward(self, loss):
+        """Jit-able backward pass"""
+        self.grads = jax.grad(self.bnn, has_aux=True)()
+
+    def optimizer_step(self, *args, **kwargs):
+        optim, opt_state = self.optimizers()
+        updates, opt_state = optim.update(self.grads, opt_state)
+        self.model = eqx.apply_updates(self.bnn, updates)
 
     @staticmethod
     @eqx.filter_jit
@@ -283,10 +326,13 @@ class JaxLightning(pl.LightningModule):
         self.optim = optax.adam(0.001)
         self.opt_state = self.optim.init(eqx.filter(self.bnn, eqx.is_array))
 
+    def optimizers(self):
+        return (self.optim, self.opt_state)
+
 
 print(jax.devices())
 
 bnn = JaxLightning()
 dm = RegressionDataModule()
-trainer = Trainer(max_steps=4000)
+trainer = Trainer(max_steps=1_000)
 trainer.fit(bnn, dm)
